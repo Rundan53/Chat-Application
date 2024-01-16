@@ -20,8 +20,45 @@ function showForgotPassword() {
 }
 
 
-function signUp(event){
-    event.preventDefault();
-   
+
+function handleError(target,message) {
+    const existingErrorMessages = target.querySelectorAll('p');
+    existingErrorMessages.forEach((errMessage) => {
+        if(errMessage.id === 'errorMessage'){
+            errMessage.remove();
+        }
+    });
+    
+    let errMessage = document.createElement('p');
+    errMessage.id = 'errorMessage';
+    errMessage.innerHTML = message;
+    errMessage.style.color = 'red';
+    errMessage.style.textDecoration = 'underline'
+    target.append(errMessage);
 }
+
+
+
+function signUp(e){
+    e.preventDefault();
+    const userDetails = {
+        username: e.target.username.value,
+        email: e.target.signupEmail.value,
+        phoneNumber: e.target.signupPhone.value,
+        password: e.target.signupPassword.value
+    }
+
+    axios.post('/user/sign-up', userDetails)
+    .then((res)=>{
+        if(res.status === 201){
+           alert(res.data.message);
+           showLoginModal(); 
+        }
+    })
+    .catch((err)=>{
+        handleError(e.target,err.response.data.message);
+    })
+}
+
+
 
