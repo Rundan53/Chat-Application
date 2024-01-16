@@ -1,6 +1,11 @@
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const User = require('../models/User');
+
+function generateJwt(userId){
+    return jwt.sign({userId: userId}, process.env.JWT_SECRET)
+}
 
 
 function isValidString(string) {
@@ -39,6 +44,38 @@ exports.createUser = (req, res) => {
     .catch((err)=>{
         res.status(500).json({message: err.message || 'Something went wrong'});
     })
-  
+}
 
+
+
+
+exports.checkUser = (req, res)=>{
+    const {email, password } = req.body;
+
+    if (!isValidString(email) || !isValidString(password)) {
+        return res.status(400).json({ message: 'Bad parameters: Something is missing' })
+    }
+
+    User.findOne({ where: { email: email } })
+        .then((user) => {
+            if (!user) {
+                return res.status(404).json({ message: 'User not found' })
+            }
+
+            bcrypt.compare(password, user.password, (err, result) => {
+                if (err) {
+                    throw new Error('Something went wrong');
+                }
+                else if (!result) {
+                    res.status(400).json({ message: 'Wrong Email or password' });
+                }
+                else{
+                    const token = generateJwt(user.id);
+                    res.status(200).json({message: 'Successfully login', token: token});
+                }  
+            })
+        })
+        .catch((err) => {
+            res.status(500).json({ message: err || 'Something went wrong'});
+        })
 }

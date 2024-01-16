@@ -61,4 +61,30 @@ function signUp(e){
 }
 
 
+function login(e) {
+    e.preventDefault();
+    const {loginEmail, loginPassword} = e.target;
+
+    const loginDetails = {
+        email: loginEmail.value, 
+        password: loginPassword.value
+    }
+
+    axios.post(`user/login`, loginDetails)
+    .then((res) => {
+       
+        if (res.status == 200) {
+            localStorage.setItem('token', res.data.token);
+            console.log(res)
+            alert(res.data.message);
+            window.location.href = '/ezchat';
+        }
+        else {
+            throw new Error('failed to login')
+        }
+    })
+    .catch(err => {
+       handleError(e.target,err.response.data.message);
+    })
+}
 
