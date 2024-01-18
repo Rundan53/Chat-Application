@@ -37,7 +37,7 @@ exports.createUser = (req, res) => {
             }
     
             const user = await User.create({username, email, phoneNumber, password: hash});
-            res.status(201).json({ message: 'User Created Successfully' });
+            res.status(201).json({ message: 'Sign Up Successfully' });
            
         })
     })

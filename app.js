@@ -1,12 +1,18 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 
-const homePageController = require('./controllers/pages');
-const ezchatPageController = require('./controllers/pages')
-const userController = require('./controllers/user');
+
+
 const sequelize = require('./util/database');
 
 const userRoutes = require('./routes/user');
+const passwordRoutes = require('./routes/password');
+const pageRoutes = require('./routes/page')
+const chatRoutes = require('./routes/chat')
+
+const User = require('./models/User');
+const ForgotPassword = require('./models/ForgotPassword');
+const ChatHistory = require('./models/ChatHistory');
 
 const app = express();
 
@@ -15,14 +21,22 @@ app.use(bodyParser.json());
 
 app.use(express.static('public'));
 
-app.use('/user', userRoutes);
-app.use('/ezchat', ezchatPageController.sendChatPage)
-app.get('/', homePageController.sendMainPage);
 
+app.use('/user', userRoutes);
+app.use('/password', passwordRoutes);
+app.use('/user-chat', chatRoutes);
+app.use(pageRoutes);
+
+
+
+User.hasMany(ForgotPassword);
+ForgotPassword.belongsTo(User);
+User.hasMany(ChatHistory);
+ChatHistory.belongsTo(User);
 
 const PORT = process.env.PORT_NO;
 
-function initialize(){
+function initiate(){
     sequelize.sync()
     .then(()=>{
         app.listen(PORT,()=>{
@@ -35,4 +49,4 @@ function initialize(){
     
 }
 
-initialize();
+initiate();
