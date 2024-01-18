@@ -3,11 +3,13 @@ const router = Router();
 
 const userAuthentication = require('../middlewares/auth');
 
+const userController = require('../controllers/user');
 const chatController = require('../controllers/chat');
 
 router.use(userAuthentication.authenticate);
-router.post('/message', chatController.postMessages);
-
+router.get('/get-user', userController.getUser);
+router.post('/message', chatController.postMessage);
+router.get('/messages', chatController.getMessages);
 
 
 
