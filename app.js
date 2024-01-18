@@ -24,7 +24,7 @@ app.use(express.static('public'));
 
 app.use('/user', userRoutes);
 app.use('/password', passwordRoutes);
-app.use('/user-chat', chatRoutes);
+app.use('/chat', chatRoutes);
 app.use(pageRoutes);
 
 

@@ -79,3 +79,17 @@ exports.checkUser = (req, res)=>{
             res.status(500).json({ message: err || 'Something went wrong'});
         })
 }
+
+
+exports.getUser = (req, res)=>{
+    try{
+        const user = req.user;
+        const userDetails = {
+            username: user.username,
+        }
+        res.status(200).json(userDetails);
+    }
+    catch(err){
+        res.status(500).json('Something is fishy')
+    } 
+}

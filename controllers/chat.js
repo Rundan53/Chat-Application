@@ -1,20 +1,41 @@
+const { Sequelize } = require('sequelize');
 const ChatHistory = require('../models/ChatHistory')
+const User = require('../models/User');
 
-
-exports.postMessages = async (req, res)=>{
-    try{
+exports.postMessage = async (req, res) => {
+    try {
         const user = req.user;
-        const {message} = req.body;
+        const { message } = req.body;
         console.log(`>>>>>>>>>${user.id}`)
-        const responseMssg = await ChatHistory.create({message: message, userId: user.id})
+        const responseMssg = await ChatHistory.create({ message: message, userId: user.id })
 
-        if(!message){
-            throw new Error('Something wrong in creating history') 
+        if (!message) {
+            throw new Error('Something wrong in creating history')
         }
 
-        res.status(201).json({success:true, message: responseMssg}); 
+        res.status(201).json({ success: true, message: responseMssg });
     }
-    catch(err){
+    catch (err) {
         res.status(500).json(err || 'Something went wrong')
-    } 
+    }
 }
+
+
+
+exports.getMessages = async (req, res) => {
+    try {
+        const messages = await ChatHistory.findAll({
+            attributes: ['message'],
+            include: [{
+                model: User,
+                attributes: ['username']
+            }],
+            order: [['updatedAt', 'ASC']]
+        });
+
+        res.status(200).json(messages);
+    }
+    catch (err) {
+        res.status(500).json(err.message || 'Something went wrong');
+    }
+};
