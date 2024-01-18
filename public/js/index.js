@@ -20,7 +20,7 @@ function showForgotPassword() {
 }
 
 
-
+//function handles errors of login/signup/forgot-password
 function handleError(target,message) {
     const existingErrorMessages = target.querySelectorAll('p');
     existingErrorMessages.forEach((errMessage) => {
@@ -39,6 +39,7 @@ function handleError(target,message) {
 
 
 
+//signup
 function signUp(e){
     e.preventDefault();
     const userDetails = {
@@ -61,6 +62,7 @@ function signUp(e){
 }
 
 
+//login
 function login(e) {
     e.preventDefault();
     const {loginEmail, loginPassword} = e.target;
@@ -75,7 +77,6 @@ function login(e) {
        
         if (res.status == 200) {
             localStorage.setItem('token', res.data.token);
-            console.log(res)
             alert(res.data.message);
             window.location.href = '/ezchat';
         }
@@ -88,3 +89,27 @@ function login(e) {
     })
 }
 
+
+
+//forgot-password
+const resetForm = document.getElementById('resetPasswordForm');
+resetForm.addEventListener('submit', (event)=> {
+    event.preventDefault();
+    resetPassword(event);
+});
+
+async function resetPassword(e) {
+    const emailInput = document.getElementById('registeredEmail');
+    const userInfo = {
+        email: emailInput.value
+    }
+    try{
+        const response = await axios.post('password/forgot-password', userInfo);
+        handleError(e.target, response.data.message);
+    }
+    catch(err){
+        handleError(e.target,err.response.data.message);
+    }
+   
+
+}
