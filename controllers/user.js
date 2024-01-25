@@ -86,6 +86,7 @@ exports.getUser = (req, res)=>{
         const user = req.user;
         const userDetails = {
             username: user.username,
+            userId: user.id,
         }
         res.status(200).json(userDetails);
     }
