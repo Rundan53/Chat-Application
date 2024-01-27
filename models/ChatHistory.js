@@ -13,7 +13,13 @@ const ChatHistory = sequelize.define('chatHistory', {
     message: {
         type: Sequelize.TEXT,
         allowNull: false,
+    },
+
+    isImage: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false,
     }
+
 });
 
 

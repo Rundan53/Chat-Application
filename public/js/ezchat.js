@@ -1,4 +1,6 @@
+
 const mssgBox = document.getElementById('chatContainer');
+const imageInput = document.getElementById('fileInput');
 const socket = io();
 const token = localStorage.getItem('token');
 
@@ -14,11 +16,18 @@ socket.on('message', async (mssgDetails, groupId) => {
 });
 
 
+socket.on('groupUpdates', (updatedGroupDetails) => {
+    updateAllUsers(updatedGroupDetails);
+})
+
+
 
 //EventListeners
 window.addEventListener('DOMContentLoaded', async () => {
     getMygroups();
 });
+
+imageInput.addEventListener('change', imageFileHandler);
 
 mssgBox.addEventListener('scroll', scrollHandler);
 
@@ -40,12 +49,60 @@ function closeEditGroupModal() {
     $('#editGroup').modal('hide');
 }
 
+
+async function updateAllUsers(groupDetails) {
+    const groupToUpdate = document.getElementById(`group${groupDetails.groupId}`);
+    const editBtn = document.getElementById(`edit${groupDetails.groupId}`)
+    const user = await getCurrentUser();
+    const updatedMemberIds = groupDetails.userIds;
+
+    console.log(updatedMemberIds, user.data.userId)
+
+    if (updatedMemberIds.includes(user.data.userId.toString())) {
+        groupToUpdate.textContent = '';
+        groupToUpdate.textContent = groupDetails.groupName;
+        return;
+    }
+
+    groupToUpdate.remove();
+    if (editBtn) {
+        editBtn.remove();
+    }
+}
+
+
+
+async function imageFileHandler() {
+    try{
+        const groupId = document.getElementById('groupId').value;
+        const file = imageInput.files[0];
+    
+        const formData = new FormData();
+        formData.append('imageFile', file);
+        formData.append('groupId', groupId);
+    
+        console.log(file)
+        const mssgDetails = await axios.post('/chat/upload', formData, { headers: { 'Authorization': token } });
+    
+        socket.emit('message', mssgDetails, groupId);
+    
+    }
+    catch(err){
+        console.error(err);
+    }
+   
+}
+
+
+
+
+
 async function createGroup(e) {
     e.preventDefault();
     const form = e.target;
     const selectedCheckedBoxes = form.querySelectorAll('input[type="checkbox"]:checked');
 
-    if(!selectedCheckedBoxes || selectedCheckedBoxes.length==0){
+    if (!selectedCheckedBoxes || selectedCheckedBoxes.length == 0) {
         alert('please add the users');
         return;
     }
@@ -97,6 +154,7 @@ async function getMygroups() {
 function renderGroupOnScreen(groupName, groupId, isAdmin) {
     const newGroup = document.createElement('div');
     newGroup.className = 'group';
+    newGroup.id = `group${groupId}`
     newGroup.textContent = groupName;
     document.getElementById('dynamicGroupsContainer').appendChild(newGroup);
 
@@ -138,6 +196,7 @@ function createEditButton(groupId) {
     const editBtn = document.createElement('button');
     editBtn.innerHTML = 'Edit';
     editBtn.className = 'group';
+    editBtn.id = `edit${groupId}`;
     editBtn.style.backgroundColor = 'green';
     editBtn.addEventListener('mouseover', () => {
         editBtn.style.backgroundColor = 'lightgray';
@@ -208,43 +267,42 @@ function insertGroupDetails(groupObj, nonMembersObj) {
 
 
 async function editGroupDetails(e) {
-    try{
+    try {
         e.preventDefault();
         const groupId = document.getElementById('editGroupId').value
         console.log(groupId);
-    
+
         const form = e.target;
         const selectedCheckedBoxes = form.querySelectorAll('input[type="checkbox"]:checked');
-    
-        if(!selectedCheckedBoxes || selectedCheckedBoxes.length==0){
+
+        if (!selectedCheckedBoxes || selectedCheckedBoxes.length == 0) {
             alert('please add the users');
             return;
         }
         const userIds = Array.from(selectedCheckedBoxes).map((checkbox) => {
             return checkbox.value;
         });
-    
+
         const groupName = e.target.editGroupName.value;
-    
+
         const updatedGroupDetails = {
             userIds: userIds,
             groupName: groupName,
             groupId: groupId
         }
-    
-        console.log(updatedGroupDetails);
-    
+
+
         const response = await axios.post('/chat/update-group', updatedGroupDetails, { headers: { 'Authorization': token } })
-        if(response.status === 201){
+        if (response.status === 201) {
             closeEditGroupModal();
-            alert('updated');
+            socket.emit('groupUpdates', updatedGroupDetails);
         }
-        
+
     }
-    catch{
+    catch {
         alert('updation api not working');
     }
-   
+
 }
 
 
@@ -356,8 +414,7 @@ async function getChat(groupId) {
         catch (err) {
             console.error(err.message);
         }
-
-    });
+    })
 
 
 }
@@ -384,19 +441,48 @@ function updateLocalStorage(newMessagesArray) {
 
 
 function showOnScreen(mssgObj, currentUserId) {
+    console.log(mssgObj);
+    if (mssgObj.isImage) {
+        const div = document.createElement('div');
+        const imageElement = document.createElement('img');
+        if (mssgObj.user.id === currentUserId) {
+            div.className = 'message left';
+            div.innerHTML = `<b>You:</b>`;
+            imageElement.id= 'image-container';
+            imageElement.src= mssgObj.message;
+            div.appendChild(imageElement);
+            // Append the image element to the image container
+           
+            mssgBox.appendChild(div);
+        }
+        else {
+            div.className = 'message right';
+            div.innerHTML = `<b>${mssgObj.user.username}:</b>`;
+            imageElement.id= 'image-container';
+            imageElement.src= mssgObj.message;
+            div.appendChild(imageElement);
+            // Append the image element to the image container
+           
+            mssgBox.appendChild(div);
+        }
 
-    const div = document.createElement('div');
-    if (mssgObj.user.id === currentUserId) {
-        div.className = 'message left';
-        div.innerHTML = `<b>You:</b> ${mssgObj.message}`
     }
     else {
-        div.className = 'message right';
-        div.innerHTML = `<b>${mssgObj.user.username}:</b> ${mssgObj.message}`
+        const div = document.createElement('div');
+
+        if (mssgObj.user.id === currentUserId) {
+            div.className = 'message left';
+            div.innerHTML = `<b>You:</b> ${mssgObj.message}`
+        }
+        else {
+            div.className = 'message right';
+            div.innerHTML = `<b>${mssgObj.user.username}:</b> ${mssgObj.message}`
+        }
+
+        mssgBox.appendChild(div);
+        document.getElementById('mssgInput').value = null;
     }
 
-    mssgBox.appendChild(div);
-    document.getElementById('mssgInput').value = null;
     mssgBox.scrollTop = mssgBox.scrollHeight;
 }
 
@@ -414,4 +500,3 @@ async function getCurrentUser() {
         console.log(err);
     }
 }
-

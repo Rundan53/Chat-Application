@@ -261,8 +261,11 @@ nav {
 }
 
 #image-container {
-    max-width: 50%;
-    max-height: 50%;
+    width: auto;
+    height: auto;
+    display: block;
+    margin: auto;
+   
 }
 
 @media only screen and (max-width: 600px) {

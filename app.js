@@ -4,6 +4,7 @@ const {Server} = require('socket.io')
 
 const express = require('express');
 const bodyParser = require('body-parser');
+const multer = require('multer')
 
 const sequelize = require('./util/database');
 
@@ -29,6 +30,10 @@ app.use(bodyParser.json());
 io.on('connection', (socket) => {
    socket.on('message', (mssgDetails, groupId)=>{
     io.emit('message', mssgDetails, groupId);
+   })
+
+   socket.on('groupUpdates', (updatedGroupDetails)=>{
+    io.emit('groupUpdates', updatedGroupDetails);
    })
 })
 
@@ -58,12 +63,11 @@ function initiate(){
     .then(()=>{
         server.listen(PORT,()=>{
             console.log(`>>>>Server is listening on port ${PORT}`)
-        });
+        })
     })
     .catch((err)=>{
         console.log(err);
-    });
-    
+    }); 
 }
 
 initiate();

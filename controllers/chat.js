@@ -4,7 +4,7 @@ const User = require('../models/User');
 const { Op } = require('sequelize');
 const Group = require('../models/Group');
 const Groupmember = require('../models/Groupmember');
-const { GetExtendedCampaignOverviewSender } = require('sib-api-v3-sdk');
+const S3service = require('../services/s3service');
 
 exports.postMessage = async (req, res) => {
     try {
@@ -22,6 +22,7 @@ exports.postMessage = async (req, res) => {
             {
                 id: mssgResponse.id,
                 message: mssgResponse.message,
+                isImage: mssgResponse.isImage,
                 user: {
                     username: user.username,
                     id: user.id
@@ -47,7 +48,7 @@ exports.getMessages = async (req, res) => {
 
         if (!lastMessageId || lastMessageId == -1) {
             messages = await ChatHistory.findAll({
-                attributes: ['id', 'message'],
+                attributes: ['id', 'message', 'isImage'],
                 where: {
                     groupId: Number(groupId)
                 },
@@ -62,7 +63,7 @@ exports.getMessages = async (req, res) => {
         }
 
         messages = await ChatHistory.findAll({
-            attributes: ['id', 'message'],
+            attributes: ['id', 'message', 'isImage'],
             include: [{
                 model: User,
                 attributes: ['username']
@@ -210,3 +211,39 @@ exports.updateGroup = async (req, res) => {
     }
 }
 
+
+exports.imageHandler = async (req, res)=> {
+   try{
+    const user = req.user;
+    const {groupId} = req.body;
+    const imageFile = req.file;
+
+    const fileName = `chat-images/group${groupId}/user${user.id}/${Date.now()}-${imageFile.originalname}`;
+    const fileUrl = await S3service.uploadToS3(imageFile.buffer, fileName);
+    
+    const mssgResponse = await user.createChatHistory({
+        message: fileUrl,
+        isImage: true,
+        groupId
+    });
+
+    console.log(mssgResponse);
+    const messageDetails = [
+        {
+            id: mssgResponse.id,
+            message: mssgResponse.message,
+            isImage: mssgResponse.isImage,
+            user: {
+                username: user.username,
+                id: user.id
+            }
+        }
+    ]
+
+    res.status(201).json({ success: true, messageDetails: messageDetails });
+
+   }
+   catch(err){
+    res.status(500).json({message: err.message})
+   }
+}
