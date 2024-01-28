@@ -4,7 +4,6 @@ const imageInput = document.getElementById('fileInput');
 const socket = io();
 const token = localStorage.getItem('token');
 
-
 socket.on('message', async (mssgDetails, groupId) => {
     const user = await getCurrentUser();
     const currentGroup = document.getElementById('groupId').value;
@@ -56,15 +55,25 @@ async function updateAllUsers(groupDetails) {
     const user = await getCurrentUser();
     const updatedMemberIds = groupDetails.userIds;
 
-    console.log(updatedMemberIds, user.data.userId)
-
     if (updatedMemberIds.includes(user.data.userId.toString())) {
+        if(!groupToUpdate){
+            renderGroupOnScreen(groupDetails.groupName, groupDetails.groupId, groupDetails.adminId == user.data.userId);
+            return;
+        }
         groupToUpdate.textContent = '';
         groupToUpdate.textContent = groupDetails.groupName;
         return;
     }
 
+    const currentOpenGroup = document.getElementById('groupId').value;
+
+    if(currentOpenGroup){
+        if(currentOpenGroup == groupDetails.groupId){
+            document.getElementById('chatContainer').style.display = 'none';
+        }
+    }
     groupToUpdate.remove();
+   
     if (editBtn) {
         editBtn.remove();
     }
@@ -81,7 +90,6 @@ async function imageFileHandler() {
         formData.append('imageFile', file);
         formData.append('groupId', groupId);
     
-        console.log(file)
         const mssgDetails = await axios.post('/chat/upload', formData, { headers: { 'Authorization': token } });
     
         socket.emit('message', mssgDetails, groupId);
@@ -120,8 +128,7 @@ async function createGroup(e) {
     //if the current user is admin reponse should also contain boolean values of it 
     //(this is wrong, if user has created group then he's the admin);
 
-    console.log(response);
-
+    // socket.emit('groupCreation', )
     renderGroupOnScreen(response.data.group.groupName, response.data.group.id, true);
     closeGroupModal();
 }
@@ -170,6 +177,7 @@ function renderGroupOnScreen(groupName, groupId, isAdmin) {
 
 function newGroupHandler(groupId) {
     document.getElementById('groupId').value = groupId;
+  
     document.getElementById('chatContainer').style.display = 'none';
     const sendMssgForm = document.getElementsByClassName('send-container');
 
@@ -210,7 +218,7 @@ function createEditButton(groupId) {
     editBtn.addEventListener('click', async () => {
         document.getElementById('editGroupId').value = groupId;
         const [groupDetails, nonMembers] = await getTheGroupInfo(groupId);
-        console.log(nonMembers);
+       
         insertGroupDetails(groupDetails.data, nonMembers.data);
     });
 }
@@ -227,7 +235,7 @@ function getTheGroupInfo(groupId) {
             resolve(response);
         }
         catch (err) {
-            console.log(err.message);
+            console.error(err.message);
             alert('Some problem in fetching group details');
         }
     })
@@ -270,7 +278,6 @@ async function editGroupDetails(e) {
     try {
         e.preventDefault();
         const groupId = document.getElementById('editGroupId').value
-        console.log(groupId);
 
         const form = e.target;
         const selectedCheckedBoxes = form.querySelectorAll('input[type="checkbox"]:checked');
@@ -284,11 +291,13 @@ async function editGroupDetails(e) {
         });
 
         const groupName = e.target.editGroupName.value;
+        const user = await getCurrentUser();
 
         const updatedGroupDetails = {
             userIds: userIds,
             groupName: groupName,
-            groupId: groupId
+            groupId: groupId,
+            adminId: user.data.userId
         }
 
 
@@ -309,8 +318,7 @@ async function editGroupDetails(e) {
 async function fetchMembers() {
     try {
         const users = await axios.get('/chat/get-users', { headers: { 'Authorization': token } });
-        console.log(users);
-
+     
         if (users.status === 200) {
             document.getElementById('membersList').innerHTML = '';
             users.data.forEach((user) => {
@@ -361,7 +369,7 @@ function saveMessage(e) {
             socket.emit('message', mssgDetails, groupId);
         })
         .catch((err) => {
-            console.log(err);
+            console.error(err);
         })
 }
 
@@ -380,7 +388,6 @@ async function getChat(groupId) {
 
     let lastMessageId;
     if (oldMessagesArray) {
-        console.log(`length of the aray in localstorage is ${oldMessagesArray.length}`);
         lastMessageId = oldMessagesArray[oldMessagesArray.length - 1].id;
     }
     else {
@@ -441,7 +448,7 @@ function updateLocalStorage(newMessagesArray) {
 
 
 function showOnScreen(mssgObj, currentUserId) {
-    console.log(mssgObj);
+  
     if (mssgObj.isImage) {
         const div = document.createElement('div');
         const imageElement = document.createElement('img');
