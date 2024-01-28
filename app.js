@@ -19,10 +19,15 @@ const ChatHistory = require('./models/ChatHistory');
 const Group = require('./models/Group');
 const Groupmember = require('./models/Groupmember');
 
+
 const app = express();
 const server = createServer(app);
 
 const io = new Server(server);
+
+const cronJobService = require('./services/cronjob');
+
+cronJobService.job.start();
 
 require('dotenv').config();
 app.use(bodyParser.json());
@@ -35,6 +40,7 @@ io.on('connection', (socket) => {
    socket.on('groupUpdates', (updatedGroupDetails)=>{
     io.emit('groupUpdates', updatedGroupDetails);
    })
+
 })
 
 app.use(express.static('public'));
