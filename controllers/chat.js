@@ -62,17 +62,17 @@ exports.getMessages = async (req, res) => {
             return res.status(200).json(messages);
         }
 
-        messages = await ChatHistory.findAll({
-            attributes: ['id', 'message', 'isImage'],
-            include: [{
-                model: User,
-                attributes: ['username']
-            }],
-            order: [['updatedAt', 'ASC']],
-            offset: offset
-        });
+        // messages = await ChatHistory.findAll({
+        //     attributes: ['id', 'message', 'isImage'],
+        //     include: [{
+        //         model: User,
+        //         attributes: ['username']
+        //     }],
+        //     order: [['updatedAt', 'ASC']],
+        //     offset: offset
+        // });
 
-        res.status(200).json(messages);
+        // res.status(200).json(messages);
 
     }
     catch (err) {

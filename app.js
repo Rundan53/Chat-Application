@@ -2,9 +2,13 @@ const http = require('http');
 const {createServer} = require('node:http');
 const {Server} = require('socket.io')
 
+const fs = require('fs');
+const path = require('path');
+
 const express = require('express');
 const bodyParser = require('body-parser');
-const multer = require('multer')
+const compression = require('compression');
+const morgan = require('morgan')
 
 const sequelize = require('./util/database');
 
@@ -19,32 +23,45 @@ const ChatHistory = require('./models/ChatHistory');
 const Group = require('./models/Group');
 const Groupmember = require('./models/Groupmember');
 
+const cronService = require('./services/cronjob');
 
 const app = express();
 const server = createServer(app);
-
 const io = new Server(server);
 
-const cronJobService = require('./services/cronjob');
+cronService.job.start();
 
-cronJobService.job.start();
+//write stream for access log
+const accessLogStream = fs.createWriteStream(
+    path.join(__dirname, 'access.log'),
+    {flags: 'a'});
 
 require('dotenv').config();
-app.use(bodyParser.json());
 
+
+
+//Established Socket connection
 io.on('connection', (socket) => {
-   socket.on('message', (mssgDetails, groupId)=>{
-    io.emit('message', mssgDetails, groupId);
-   })
+    socket.on('message', (mssgDetails, groupId) => {
+        io.emit('message', mssgDetails, groupId);
+    });
 
-   socket.on('groupUpdates', (updatedGroupDetails)=>{
-    io.emit('groupUpdates', updatedGroupDetails);
-   })
+    socket.on('groupUpdates', (updatedGroupDetails) => {
+        io.emit('groupUpdates', updatedGroupDetails);
+    });
 
-})
+    socket.on('groupCreation', (groupDetails, groupId, flag) => {
+        //semit to clients except sender client
+        socket.broadcast.emit('groupCreation', groupDetails, groupId, flag);
+    });
+});
 
+
+//middlewares with Routes
+app.use(bodyParser.json());
 app.use(express.static('public'));
-
+app.use(compression());
+app.use(morgan('combined', {stream: accessLogStream}));
 
 app.use('/user', userRoutes);
 app.use('/password', passwordRoutes);
@@ -52,7 +69,7 @@ app.use('/chat', chatRoutes);
 app.use(pageRoutes);
 
 
-
+//DB Associations
 User.hasMany(ForgotPassword);
 ForgotPassword.belongsTo(User);
 User.hasMany(ChatHistory);

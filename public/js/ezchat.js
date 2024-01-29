@@ -19,6 +19,15 @@ socket.on('groupUpdates', (updatedGroupDetails) => {
     updateAllUsers(updatedGroupDetails);
 })
 
+socket.on('groupCreation', async(groupDetails, groupId, flag) => {
+    const user = await getCurrentUser();
+    groupDetails.userIds.forEach((userId)=>{
+        if(userId == user.data.userId){
+            renderGroupOnScreen(groupDetails.groupName, groupId, flag);
+        }
+    })
+    
+})
 
 
 //EventListeners
@@ -56,7 +65,7 @@ async function updateAllUsers(groupDetails) {
     const updatedMemberIds = groupDetails.userIds;
 
     if (updatedMemberIds.includes(user.data.userId.toString())) {
-        if(!groupToUpdate){
+        if (!groupToUpdate) {
             renderGroupOnScreen(groupDetails.groupName, groupDetails.groupId, groupDetails.adminId == user.data.userId);
             return;
         }
@@ -67,13 +76,13 @@ async function updateAllUsers(groupDetails) {
 
     const currentOpenGroup = document.getElementById('groupId').value;
 
-    if(currentOpenGroup){
-        if(currentOpenGroup == groupDetails.groupId){
+    if (currentOpenGroup) {
+        if (currentOpenGroup == groupDetails.groupId) {
             document.getElementById('chatContainer').style.display = 'none';
         }
     }
     groupToUpdate.remove();
-   
+
     if (editBtn) {
         editBtn.remove();
     }
@@ -82,23 +91,23 @@ async function updateAllUsers(groupDetails) {
 
 
 async function imageFileHandler() {
-    try{
+    try {
         const groupId = document.getElementById('groupId').value;
         const file = imageInput.files[0];
-    
+
         const formData = new FormData();
         formData.append('imageFile', file);
         formData.append('groupId', groupId);
-    
+
         const mssgDetails = await axios.post('/chat/upload', formData, { headers: { 'Authorization': token } });
-    
+
         socket.emit('message', mssgDetails, groupId);
-    
+
     }
-    catch(err){
+    catch (err) {
         console.error(err);
     }
-   
+
 }
 
 
@@ -106,31 +115,37 @@ async function imageFileHandler() {
 
 
 async function createGroup(e) {
-    e.preventDefault();
-    const form = e.target;
-    const selectedCheckedBoxes = form.querySelectorAll('input[type="checkbox"]:checked');
+    try {
+        e.preventDefault();
+        const form = e.target;
+        const selectedCheckedBoxes = form.querySelectorAll('input[type="checkbox"]:checked');
 
-    if (!selectedCheckedBoxes || selectedCheckedBoxes.length == 0) {
-        alert('please add the users');
-        return;
+        if (!selectedCheckedBoxes || selectedCheckedBoxes.length == 0) {
+            alert('please add the users');
+            return;
+        }
+        const userIds = Array.from(selectedCheckedBoxes).map((checkbox) => {
+            return checkbox.value;
+        });
+
+        const groupName = e.target.groupName.value;
+
+        const groupDetails = {
+            userIds: userIds,
+            groupName: groupName
+        }
+        const response = await axios.post('/chat/create-group', groupDetails, { headers: { 'Authorization': token } });
+        //if the current user is admin reponse should also contain boolean values of it 
+        //(this is wrong, if user has created group then he's the admin);
+
+        // socket.emit('groupCreation', )
+        renderGroupOnScreen(response.data.group.groupName, response.data.group.id, true);
+        closeGroupModal();
+        socket.emit('groupCreation', groupDetails, response.data.group.id, false)
     }
-    const userIds = Array.from(selectedCheckedBoxes).map((checkbox) => {
-        return checkbox.value;
-    });
-
-    const groupName = e.target.groupName.value;
-
-    const groupDetails = {
-        userIds: userIds,
-        groupName: groupName
+    catch (err) {
+        console.error(err.message)
     }
-    const response = await axios.post('/chat/create-group', groupDetails, { headers: { 'Authorization': token } });
-    //if the current user is admin reponse should also contain boolean values of it 
-    //(this is wrong, if user has created group then he's the admin);
-
-    // socket.emit('groupCreation', )
-    renderGroupOnScreen(response.data.group.groupName, response.data.group.id, true);
-    closeGroupModal();
 }
 
 
@@ -177,7 +192,7 @@ function renderGroupOnScreen(groupName, groupId, isAdmin) {
 
 function newGroupHandler(groupId) {
     document.getElementById('groupId').value = groupId;
-  
+
     document.getElementById('chatContainer').style.display = 'none';
     const sendMssgForm = document.getElementsByClassName('send-container');
 
@@ -218,7 +233,7 @@ function createEditButton(groupId) {
     editBtn.addEventListener('click', async () => {
         document.getElementById('editGroupId').value = groupId;
         const [groupDetails, nonMembers] = await getTheGroupInfo(groupId);
-       
+
         insertGroupDetails(groupDetails.data, nonMembers.data);
     });
 }
@@ -248,6 +263,7 @@ function insertGroupDetails(groupObj, nonMembersObj) {
 
     const membersList = document.getElementById('editMembersList');
     membersList.innerHTML = '';
+
     groupObj.users.forEach((user) => {
         const groupMember = document.createElement('li');
         groupMember.innerHTML = `<li class="list-group-item justify-content-between d-flex" style="display: block;">
@@ -318,7 +334,7 @@ async function editGroupDetails(e) {
 async function fetchMembers() {
     try {
         const users = await axios.get('/chat/get-users', { headers: { 'Authorization': token } });
-     
+
         if (users.status === 200) {
             document.getElementById('membersList').innerHTML = '';
             users.data.forEach((user) => {
@@ -448,28 +464,28 @@ function updateLocalStorage(newMessagesArray) {
 
 
 function showOnScreen(mssgObj, currentUserId) {
-  
+
     if (mssgObj.isImage) {
         const div = document.createElement('div');
         const imageElement = document.createElement('img');
         if (mssgObj.user.id === currentUserId) {
             div.className = 'message left';
             div.innerHTML = `<b>You:</b>`;
-            imageElement.id= 'image-container';
-            imageElement.src= mssgObj.message;
+            imageElement.id = 'image-container';
+            imageElement.src = mssgObj.message;
             div.appendChild(imageElement);
             // Append the image element to the image container
-           
+
             mssgBox.appendChild(div);
         }
         else {
             div.className = 'message right';
             div.innerHTML = `<b>${mssgObj.user.username}:</b>`;
-            imageElement.id= 'image-container';
-            imageElement.src= mssgObj.message;
+            imageElement.id = 'image-container';
+            imageElement.src = mssgObj.message;
             div.appendChild(imageElement);
             // Append the image element to the image container
-           
+
             mssgBox.appendChild(div);
         }
 

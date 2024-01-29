@@ -17,13 +17,13 @@ async function archeiveChatsAndDeleteOldChats() {
         const transaction = await sequelize.transaction();
 
         const date = new Date();
-        const tenDaysBefore = date.setDate(new Date().getDate() - 10);
+        const sevenDaysBefore = date.setDate(new Date().getDate() - 7);
        
         const archievedChats = await ChatHistory.findAll({
             attributes: ['id', 'message', 'isImage', 'userId', 'groupId'],
             where: {
                 updatedAt: {
-                    [Op.lt]: tenDaysBefore
+                    [Op.lt]: sevenDaysBefore
                 }
             }
         });
